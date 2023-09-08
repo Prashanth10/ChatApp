@@ -1,0 +1,392 @@
+package com.example.chatapp
+
+import android.os.Build
+import android.os.Bundle
+import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.chatapp.dataclass.MsgItem
+import com.example.chatapp.ui.theme.ChatAppTheme
+import com.example.chatapp.viewmodels.ChatViewModel
+import com.example.chatapp.viewmodels.ThemeViewModel
+import java.text.SimpleDateFormat
+
+class MainActivity : ComponentActivity() {
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            val chatViewModel: ChatViewModel = viewModel()
+            val messages by chatViewModel.messages.observeAsState()
+            val themeViewModel: ThemeViewModel = viewModel()
+            val darkThemeEnabled by themeViewModel.darkThemeEnabled.observeAsState()
+
+            ChatAppTheme(darkTheme = darkThemeEnabled!!) {
+                Surface() {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) {
+                        HeaderWithProfile(themeViewModel, chatViewModel)
+                        MessageList(
+                            chatViewModel,
+                            messages!!,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                        )
+                        MessageInput(chatViewModel)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HeaderWithProfile(themeViewModel: ThemeViewModel, chatViewModel: ChatViewModel) {
+    var isMenuVisible by remember { mutableStateOf(false) }
+    val name by remember { mutableStateOf("Bot") }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.primary)
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+
+        Row(
+            horizontalArrangement = Arrangement.Start
+        ) {
+            // Profile Picture
+            Image(
+                painter = painterResource(id = R.drawable.profile_pic),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, Color.Black, shape = CircleShape)
+            )
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // User Name
+            Text(
+                text = name,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .clickable {
+                        // Handle click on name (e.g., edit name)
+                    }
+            )
+        }
+
+
+        Row(
+            horizontalArrangement = Arrangement.End
+        ) {
+            val messageList by chatViewModel.messages.observeAsState()
+            val selections = messageList?.count { it.isSelected }
+            if (selections == 0) {
+                IconButton(
+                    onClick = {
+                        isMenuVisible = true
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = isMenuVisible,
+                    onDismissRequest = { isMenuVisible = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    val themeText =
+                        if (themeViewModel.darkThemeEnabled.value!!) "Light" else "Dark"
+
+                    DropdownMenuItem(text = {
+                        Text(
+                            text = "$themeText Theme",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }, onClick = {
+                        isMenuVisible = false
+                        themeViewModel.toggleDarkTheme()
+                    })
+                }
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.icons_delete),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .padding(0.dp, 3.dp, 2.dp, 0.dp)
+                        .clickable { chatViewModel.delete() }
+                        .align(Alignment.CenterVertically)
+                )
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun MessageList(
+    chatViewModel: ChatViewModel,
+    msgList: List<MsgItem>,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier,
+        reverseLayout = true,
+    ) {
+        items(msgList.reversed()) { message ->
+            MessageCard(chatViewModel, message)
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) { //inversePrimary
+    val bgColor =
+        if (messageItem.isSelected) MaterialTheme.colorScheme.inverseOnSurface else Color.Unspecified
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(bgColor)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalAlignment = when {
+                messageItem.isMine -> Alignment.End
+                else -> Alignment.Start
+            },
+        ) {
+            Card(
+                modifier = Modifier
+                    .widthIn(max = 340.dp)
+                    .combinedClickable(
+                        enabled = true,
+                        onClickLabel = "Long press to select",
+                        role = null,
+                        onLongClickLabel = "message selected",
+                        onLongClick = {
+                            chatViewModel.selection(messageItem)
+                            Log.d("flag", "MessageCard: Long pressed")
+                        },
+                        onDoubleClick = { },
+                        onClick = {
+                            Log.d("flag", "MessageCard: Clicked")
+                            if (messageItem.isSelected)
+                                chatViewModel.selection(messageItem)
+                        }
+                    ),
+                shape = cardShapeFor(messageItem),
+                colors = when {
+                    messageItem.isMine -> CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
+                    else -> CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                },
+            ) {
+                val alignment = if (messageItem.isMine) Alignment.End else Alignment.Start
+                Text(
+                    text = messageItem.userName,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = when {
+                        messageItem.isMine -> MaterialTheme.colorScheme.surfaceTint
+                        else -> MaterialTheme.colorScheme.inverseSurface
+                    },
+                    modifier = Modifier
+                        .align(alignment)
+                        .padding(1.dp)
+                )
+                Text(
+                    modifier = when {
+                        messageItem.isMine -> Modifier.padding(7.dp, 3.dp, 20.dp, 5.dp)
+                        else -> Modifier.padding(20.dp, 3.dp, 7.dp, 5.dp)
+                    },
+                    text = messageItem.content,
+                    color = when {
+                        messageItem.isMine -> MaterialTheme.colorScheme.onPrimary
+                        else -> MaterialTheme.colorScheme.onSecondaryContainer
+                    },
+                )
+            }
+            val formatter = SimpleDateFormat("HH:mm")
+            val formatted = formatter.format(messageItem.timeStamp)
+            Text(text = formatted, fontSize = 10.sp, fontFamily = FontFamily.Serif)
+//        Row() {
+            /*val current = LocalDateTime.now()
+
+            val formatter = DateTimeFormatter.ofPattern("HH:mm")
+            val formatted = current.format(formatter)*/
+
+            /*val formatter = SimpleDateFormat("HH:mm")
+            val formatted = formatter.format(messageItem.timeStamp)
+            Text(text = formatted, fontSize = 10.sp, fontFamily = FontFamily.Serif)*/
+            /*Spacer(
+                modifier = Modifier.width(3.dp))
+            Text(
+                text = messageItem.userName,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )*/
+        }
+
+    }
+}
+
+
+@Composable
+fun cardShapeFor(message: MsgItem): Shape {
+    val roundedCorners = RoundedCornerShape(16.dp)
+    return when {
+        message.isMine -> roundedCorners.copy(topEnd = CornerSize(0))
+        else -> roundedCorners.copy(topStart = CornerSize(0))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MessageInput(chatViewModel: ChatViewModel) { //onMessageSent: (MsgItem) -> Unit
+    var inputValue by remember { mutableStateOf("") }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun sendMessage() {
+//        onMessageSent(MsgItem(inputValue, true))
+        chatViewModel.addMessage(MsgItem(inputValue, true))
+        chatViewModel.addMessage(MsgItem("received", false, "Bot"))
+        inputValue = ""
+    }
+    Row(modifier = Modifier.padding(3.dp)) {
+        TextField(
+            modifier = Modifier.weight(1f),
+            value = inputValue,
+            onValueChange = { inputValue = it },
+            placeholder = { Text(text = "Type your message", color = Color.Gray) },
+            keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
+            keyboardActions = KeyboardActions { sendMessage() },
+        )
+        Button(
+            modifier = Modifier
+                .height(56.dp)
+                .width(70.dp)
+                .padding(2.dp, 0.dp, 0.dp, 0.dp),
+            onClick = { sendMessage() },
+            enabled = inputValue.isNotBlank(),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Send,
+                contentDescription = "Send",
+                modifier = Modifier.size(70.dp)
+            )
+        }
+    }
+}
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+    /*val msgList = listOf(
+        MsgItem("Hello", isMine = true),
+        MsgItem("Hi", isMine = true),
+        MsgItem("Hru", isMine = true),
+        MsgItem("Vanakkam", isMine = true),
+        MsgItem("Bonjour", isMine = true),
+        MsgItem("Namaskaram", isMine = true),
+        MsgItem("swagatham", isMine = true),
+        MsgItem("Yes, come on", isMine = true),
+        MsgItem("Welcome", isMine = true),
+        MsgItem("Aarambikkalama", isMine = true)
+    )*/
+    val chatViewModel: ChatViewModel = viewModel()
+    val messages by chatViewModel.messages.observeAsState()
+    val themeViewModel: ThemeViewModel = viewModel()
+    ChatAppTheme {
+        Column(Modifier.fillMaxSize()) {
+            HeaderWithProfile(themeViewModel, chatViewModel)
+            MessageList(
+                chatViewModel,
+                messages!!,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            )
+            MessageInput(chatViewModel)
+//            MessageInput(onMessageSent = ::addMessage)
+        }
+    }
+}
