@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.chatapp.dataclass.MsgItem
+import com.example.chatapp.dataclass.MsgUI
 import com.example.chatapp.ui.theme.ChatAppTheme
 import com.example.chatapp.viewmodels.ChatViewModel
 import com.example.chatapp.viewmodels.ThemeViewModel
@@ -127,7 +128,6 @@ fun HeaderWithProfile(themeViewModel: ThemeViewModel, chatViewModel: ChatViewMod
                     .clip(CircleShape)
                     .border(1.dp, Color.Black, shape = CircleShape)
             )
-
             Spacer(modifier = Modifier.width(6.dp))
 
             // User Name
@@ -136,11 +136,7 @@ fun HeaderWithProfile(themeViewModel: ThemeViewModel, chatViewModel: ChatViewMod
                 fontSize = 16.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-                    .clickable {
-                        // Handle click on name (e.g., edit name)
-                    }
+                modifier = Modifier.align(Alignment.CenterVertically)
             )
         }
 
@@ -187,7 +183,7 @@ fun HeaderWithProfile(themeViewModel: ThemeViewModel, chatViewModel: ChatViewMod
                     contentDescription = null,
                     modifier = Modifier
                         .size(40.dp)
-                        .padding(0.dp, 3.dp, 2.dp, 0.dp)
+                        .padding(top = 3.dp, end = 2.dp)
                         .clickable { chatViewModel.delete() }
                         .align(Alignment.CenterVertically)
                 )
@@ -216,9 +212,26 @@ fun MessageList(
 @OptIn(ExperimentalFoundationApi::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) { //inversePrimary
+fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) {
     val bgColor =
         if (messageItem.isSelected) MaterialTheme.colorScheme.inverseOnSurface else Color.Unspecified
+    val msgUI = if (messageItem.isMine) {
+        MsgUI(
+            alignment = Alignment.End,
+            cardColor = MaterialTheme.colorScheme.primary,
+            userNameColor = MaterialTheme.colorScheme.surfaceTint,
+            msgColor = MaterialTheme.colorScheme.onPrimary
+        )
+    }
+    else{
+        MsgUI(
+            alignment = Alignment.Start,
+            cardColor = MaterialTheme.colorScheme.secondaryContainer,
+            userNameColor = MaterialTheme.colorScheme.inverseSurface,
+            msgColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -228,10 +241,7 @@ fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) { //inverseP
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalAlignment = when {
-                messageItem.isMine -> Alignment.End
-                else -> Alignment.Start
-            },
+            horizontalAlignment = msgUI.alignment,
         ) {
             Card(
                 modifier = Modifier
@@ -247,26 +257,21 @@ fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) { //inverseP
                         },
                         onDoubleClick = { },
                         onClick = {
-                            Log.d("flag", "MessageCard: Clicked")
-                            if (messageItem.isSelected)
+                            if (messageItem.isSelected) {
+                                Log.d("flag", "MessageCard: Clicked")
                                 chatViewModel.selection(messageItem)
+                            }
                         }
                     ),
                 shape = cardShapeFor(messageItem),
-                colors = when {
-                    messageItem.isMine -> CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
-                    else -> CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                },
+                colors = CardDefaults.cardColors(msgUI.cardColor),
             ) {
                 val alignment = if (messageItem.isMine) Alignment.End else Alignment.Start
                 Text(
                     text = messageItem.userName,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = when {
-                        messageItem.isMine -> MaterialTheme.colorScheme.surfaceTint
-                        else -> MaterialTheme.colorScheme.inverseSurface
-                    },
+                    color = msgUI.userNameColor,
                     modifier = Modifier
                         .align(alignment)
                         .padding(1.dp)
@@ -277,33 +282,13 @@ fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) { //inverseP
                         else -> Modifier.padding(20.dp, 3.dp, 7.dp, 5.dp)
                     },
                     text = messageItem.content,
-                    color = when {
-                        messageItem.isMine -> MaterialTheme.colorScheme.onPrimary
-                        else -> MaterialTheme.colorScheme.onSecondaryContainer
-                    },
+                    color = msgUI.msgColor,
                 )
             }
             val formatter = SimpleDateFormat("HH:mm")
             val formatted = formatter.format(messageItem.timeStamp)
             Text(text = formatted, fontSize = 10.sp, fontFamily = FontFamily.Serif)
-//        Row() {
-            /*val current = LocalDateTime.now()
-
-            val formatter = DateTimeFormatter.ofPattern("HH:mm")
-            val formatted = current.format(formatter)*/
-
-            /*val formatter = SimpleDateFormat("HH:mm")
-            val formatted = formatter.format(messageItem.timeStamp)
-            Text(text = formatted, fontSize = 10.sp, fontFamily = FontFamily.Serif)*/
-            /*Spacer(
-                modifier = Modifier.width(3.dp))
-            Text(
-                text = messageItem.userName,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )*/
         }
-
     }
 }
 
@@ -319,12 +304,11 @@ fun cardShapeFor(message: MsgItem): Shape {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MessageInput(chatViewModel: ChatViewModel) { //onMessageSent: (MsgItem) -> Unit
+fun MessageInput(chatViewModel: ChatViewModel) {
     var inputValue by remember { mutableStateOf("") }
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun sendMessage() {
-//        onMessageSent(MsgItem(inputValue, true))
         chatViewModel.addMessage(MsgItem(inputValue, true))
         chatViewModel.addMessage(MsgItem("received", false, "Bot"))
         inputValue = ""
@@ -360,18 +344,6 @@ fun MessageInput(chatViewModel: ChatViewModel) { //onMessageSent: (MsgItem) -> U
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    /*val msgList = listOf(
-        MsgItem("Hello", isMine = true),
-        MsgItem("Hi", isMine = true),
-        MsgItem("Hru", isMine = true),
-        MsgItem("Vanakkam", isMine = true),
-        MsgItem("Bonjour", isMine = true),
-        MsgItem("Namaskaram", isMine = true),
-        MsgItem("swagatham", isMine = true),
-        MsgItem("Yes, come on", isMine = true),
-        MsgItem("Welcome", isMine = true),
-        MsgItem("Aarambikkalama", isMine = true)
-    )*/
     val chatViewModel: ChatViewModel = viewModel()
     val messages by chatViewModel.messages.observeAsState()
     val themeViewModel: ThemeViewModel = viewModel()
@@ -386,7 +358,6 @@ fun GreetingPreview() {
                     .fillMaxWidth()
             )
             MessageInput(chatViewModel)
-//            MessageInput(onMessageSent = ::addMessage)
         }
     }
 }

@@ -11,21 +11,20 @@ class ChatViewModel : ViewModel() {
     val messages: LiveData<List<MsgItem>> = _messages
 
     init {
-        // Initialize with some initial messages
         _messages.value = listOf(
             MsgItem("Hello", true),
-            MsgItem("Hello", true),
-            MsgItem("Hello", true),
-            MsgItem("Hi", isMine = true),
-            MsgItem("Hru", isMine = true),
-            MsgItem("Vanakkam", isMine = true),
-            MsgItem("Bonjour", isMine = true),
-            MsgItem("Namaskaram", isMine = true),
-            MsgItem("swagatham", isMine = true, isSelected = true),
-            MsgItem("Yes, come on", isMine = true),
-            MsgItem("Welcome", isMine = true, isSelected = true),
-            MsgItem("Aarambikkalama", isMine = true),
-            MsgItem("Hello", false, "Bot")
+            MsgItem("Hey", true),
+            MsgItem("Eww", true),
+            MsgItem("Hi", true),
+            MsgItem("Hru", true),
+            MsgItem("Vanakkam", true),
+            MsgItem("Bonjour", true),
+            MsgItem("Namaskaram", true),
+            MsgItem("swagatham", true),
+            MsgItem("Yes, come on", true),
+            MsgItem("Welcome", true),
+            MsgItem("Compose is fun", true),
+            MsgItem("Hello, How can I help you?", false, "Bot")
         )
     }
 
