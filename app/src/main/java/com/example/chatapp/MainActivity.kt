@@ -243,8 +243,8 @@ fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) {
     ) {
 
         var isDialogOpen by remember { mutableStateOf(false) }
-        var newText by remember { mutableStateOf(messageItem.content) }
         if (isDialogOpen) {
+            var newText by remember { mutableStateOf(messageItem.content) }
             AlertDialog(
                 onDismissRequest = {
                     isDialogOpen = false
@@ -322,14 +322,13 @@ fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) {
                 shape = cardShapeFor(messageItem),
                 colors = CardDefaults.cardColors(msgUI.cardColor),
             ) {
-                val alignment = if (messageItem.isMine) Alignment.End else Alignment.Start
                 Text(
                     text = messageItem.userName,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = msgUI.userNameColor,
                     modifier = Modifier
-                        .align(alignment)
+                        .align(msgUI.alignment)
                         .padding(1.dp)
                 )
                 Text(
