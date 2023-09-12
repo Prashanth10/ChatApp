@@ -33,6 +33,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,6 +45,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -209,7 +211,7 @@ fun MessageList(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) {
@@ -217,14 +219,15 @@ fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) {
         if (messageItem.isSelected) MaterialTheme.colorScheme.inverseOnSurface else Color.Unspecified
     val msgUI = if (messageItem.isMine) {
         MsgUI(
+            arrangement = Arrangement.End,
             alignment = Alignment.End,
             cardColor = MaterialTheme.colorScheme.primary,
             userNameColor = MaterialTheme.colorScheme.surfaceTint,
             msgColor = MaterialTheme.colorScheme.onPrimary
         )
-    }
-    else{
+    } else {
         MsgUI(
+            arrangement = Arrangement.Start,
             alignment = Alignment.Start,
             cardColor = MaterialTheme.colorScheme.secondaryContainer,
             userNameColor = MaterialTheme.colorScheme.inverseSurface,
@@ -232,14 +235,67 @@ fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) {
         )
     }
 
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(bgColor)
+            .background(bgColor),
+        horizontalArrangement = msgUI.arrangement
     ) {
+
+        var isDialogOpen by remember { mutableStateOf(false) }
+        var newText by remember { mutableStateOf(messageItem.content) }
+        if (isDialogOpen) {
+            AlertDialog(
+                onDismissRequest = {
+                    isDialogOpen = false
+                },
+                title = {
+                    Text(text = "Edit Message")
+                },
+                text = {
+                    TextField(
+                        value = newText,
+                        onValueChange = {
+                            newText = it
+                        }
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            Log.d("flag", "MessageCard: Edit output $newText")
+                            messageItem.content = newText
+                            isDialogOpen = false
+                        }
+                    ) {
+                        Text(text = "Save")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            isDialogOpen = false
+                        }
+                    ) {
+                        Text(text = "Cancel")
+                    }
+                }
+            )
+        }
+
+        if (messageItem.isMine) {
+            Image(
+                painter = painterResource(id = R.drawable.icons_edit),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(20.dp)
+                    .padding(bottom = 2.dp, end = 2.dp)
+                    .clickable { isDialogOpen = true }
+                    .align(Alignment.CenterVertically)
+            )
+        }
         Column(
             modifier = Modifier
-                .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             horizontalAlignment = msgUI.alignment,
         ) {
