@@ -1,4 +1,4 @@
-package com.example.chatapp
+package com.example.chatapp.ui
 
 import android.os.Build
 import android.os.Bundle
@@ -65,6 +65,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.chatapp.R
 import com.example.chatapp.dataclass.MsgItem
 import com.example.chatapp.dataclass.MsgUI
 import com.example.chatapp.ui.theme.ChatAppTheme
@@ -72,7 +73,7 @@ import com.example.chatapp.viewmodels.ChatViewModel
 import com.example.chatapp.viewmodels.ThemeViewModel
 import java.text.SimpleDateFormat
 
-class MainActivity : ComponentActivity() {
+class ChatActivity : ComponentActivity() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
