@@ -75,6 +75,7 @@ dependencies {
 
     implementation("androidx.compose.material3:material3")
 
+    implementation("com.google.firebase:firebase-firestore-ktx:24.7.1")
     implementation("com.google.firebase:firebase-messaging-ktx:23.2.1")
     implementation(platform("com.google.firebase:firebase-bom:32.2.3"))
 }
