@@ -56,8 +56,11 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.chatapp.App
 import com.example.chatapp.R
+import com.example.chatapp.constants.Constants
 import com.example.chatapp.dataclass.RegisterFormData
 import com.example.chatapp.ui.theme.ChatAppTheme
+import com.example.chatapp.utils.Utils
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun RegisterPage(navController: NavController) {
@@ -155,10 +158,7 @@ fun RegisterPage(navController: NavController) {
                                 val confirmPassword = formData.confirmPassword
                                 if (validation(name, email, password, confirmPassword)) {
                                     Log.d("flag", "RegisterPage: Validation passed")
-                                    navController.navigate("login_page") {
-                                        popUpTo(navController.graph.startDestinationId)
-                                        launchSingleTop = true
-                                    }
+                                    signUp(name, email, password, navController)
                                 }
                             }
                         )
@@ -328,6 +328,27 @@ private fun validation(
         return false
     }
     return true
+}
+
+private fun signUp(name: String, email: String, password: String, navController: NavController) {
+    val db = FirebaseFirestore.getInstance()
+    val user = HashMap<String, kotlin.Any>()
+    user[Constants.KEY_NAME] = name
+    user[Constants.KEY_EMAIL] = email
+    user[Constants.KEY_PASSWORD] = password
+    db.collection(Constants.KEY_COLLECTION_USERS)
+        .add(user)
+        .addOnSuccessListener {
+            Utils.showToast("Successfully registered")
+            navController.navigate("login_page") {
+                popUpTo(navController.graph.startDestinationId)
+                launchSingleTop = true
+            }
+        }
+        .addOnFailureListener {
+            Utils.showToast(it.message!!)
+        }
+
 }
 
 @Preview(showBackground = true)
