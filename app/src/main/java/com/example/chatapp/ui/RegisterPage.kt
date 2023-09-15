@@ -109,7 +109,6 @@ fun RegisterPage(navController: NavController) {
                             value = formData.name,
                             onValueChange = { formData = formData.copy(name = it) }
                         )
-//                        RegisterName()
 
                         Spacer(modifier = Modifier.padding(3.dp))
                         RegisterAccountDetails(
@@ -117,7 +116,6 @@ fun RegisterPage(navController: NavController) {
                             value = formData.email,
                             onValueChange = { formData = formData.copy(email = it) }
                         )
-//                        RegisterEmail()
 
                         Spacer(modifier = Modifier.padding(3.dp))
                         RegisterPassword("Enter Password",
@@ -135,14 +133,7 @@ fun RegisterPage(navController: NavController) {
                         val cornerRadius = 16.dp
 
                         Spacer(modifier = Modifier.padding(10.dp))
-                        /* Button(
-                     onClick = {},
-                     modifier = Modifier
-                         .fillMaxWidth(0.8f)
-                         .height(50.dp)
-                 ) {
-                     Text(text = "Login", fontSize = 20.sp)
-                 }*/
+
                         GradientButton(
                             gradientColors = gradientColor,
                             cornerRadius = cornerRadius,
@@ -184,7 +175,7 @@ fun RegisterPage(navController: NavController) {
 }
 
 @Composable
-private fun GradientButton(
+fun GradientButton(
     gradientColors: List<Color>,
     cornerRadius: Dp,
     nameButton: String,
@@ -213,10 +204,6 @@ private fun GradientButton(
                     shape = roundedCornerShape
                 )
                 .clip(roundedCornerShape)
-                /*.background(
-                    brush = Brush.linearGradient(colors = gradientColors),
-                    shape = RoundedCornerShape(cornerRadius)
-                )*/
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -285,7 +272,6 @@ fun RegisterPassword(data: String, value: String, onValueChange: (String) -> Uni
         },
         visualTransformation =
         if (passwordHidden) PasswordVisualTransformation() else VisualTransformation.None,
-        //  keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         keyboardOptions = KeyboardOptions(
             imeAction = ImeAction.Next,
             keyboardType = KeyboardType.Password
@@ -298,7 +284,6 @@ fun RegisterPassword(data: String, value: String, onValueChange: (String) -> Uni
             IconButton(onClick = { passwordHidden = !passwordHidden }) {
                 val visibilityIcon =
                     if (passwordHidden) painterResource(R.drawable.visible) else painterResource(R.drawable.visibility)
-                // Please provide localized description for accessibility services
                 val description = if (passwordHidden) "Show password" else "Hide password"
                 Icon(painter = visibilityIcon, contentDescription = description)
             }

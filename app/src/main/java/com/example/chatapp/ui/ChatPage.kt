@@ -1,10 +1,7 @@
 package com.example.chatapp.ui
 
 import android.os.Build
-import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -65,6 +62,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.example.chatapp.R
 import com.example.chatapp.dataclass.MsgItem
 import com.example.chatapp.dataclass.MsgUI
@@ -73,34 +71,32 @@ import com.example.chatapp.viewmodels.ChatViewModel
 import com.example.chatapp.viewmodels.ThemeViewModel
 import java.text.SimpleDateFormat
 
-class ChatActivity : ComponentActivity() {
+@Composable
+@RequiresApi(Build.VERSION_CODES.O)
+fun ChatPage(navController: NavController) {
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            val chatViewModel: ChatViewModel = viewModel()
-            val messages by chatViewModel.messages.observeAsState()
-            val themeViewModel: ThemeViewModel = viewModel()
-            val darkThemeEnabled by themeViewModel.darkThemeEnabled.observeAsState()
 
-            ChatAppTheme(darkTheme = darkThemeEnabled!!) {
-                Surface() {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        HeaderWithProfile(themeViewModel, chatViewModel)
-                        MessageList(
-                            chatViewModel,
-                            messages!!,
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                        )
-                        MessageInput(chatViewModel)
-                    }
-                }
+    Log.d("flag", "onCreate: ChatActivity")
+    val chatViewModel: ChatViewModel = viewModel()
+    val messages by chatViewModel.messages.observeAsState()
+    val themeViewModel: ThemeViewModel = viewModel()
+    val darkThemeEnabled by themeViewModel.darkThemeEnabled.observeAsState()
+
+    ChatAppTheme(darkTheme = darkThemeEnabled!!) {
+        Surface() {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                HeaderWithProfile(themeViewModel, chatViewModel)
+                MessageList(
+                    chatViewModel,
+                    messages!!,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                )
+                MessageInput(chatViewModel)
             }
         }
     }
