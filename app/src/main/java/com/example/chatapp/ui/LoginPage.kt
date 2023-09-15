@@ -192,7 +192,8 @@ private fun GradientButton(
             .fillMaxWidth()
             .padding(start = 32.dp, end = 32.dp),
         onClick = {
-            //your code
+            //your code for login
+//            addDataToFireStore()
         },
 
         contentPadding = PaddingValues(),
@@ -325,3 +326,15 @@ fun LoginPreview() {
     val navController = rememberNavController()
     LoginPage(navController = navController)
 }
+
+/*
+private fun addDataToFireStore(){
+    val database = FirebaseFirestore.getInstance()
+    val data = HashMap<String, kotlin.Any>()
+    data["aa"] = "xx"
+    data["bb"] = "yy"
+    database.collection("users")
+        .add(data)
+        .addOnSuccessListener { Toast.makeText(App.ctx, "Data inserted", Toast.LENGTH_SHORT).show() }
+        .addOnFailureListener { Toast.makeText(App.ctx, "exception occurred", Toast.LENGTH_SHORT).show()}
+}*/
