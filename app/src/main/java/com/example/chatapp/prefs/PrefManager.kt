@@ -10,6 +10,10 @@ object PrefManager {
     private var prefEditor: SharedPreferences.Editor? = null
     private var bulkUpdate = false
 
+    fun clearPreferences() {
+        sharedPref?.edit()?.clear()?.apply()
+    }
+
     fun getLong(key: String, default: Long = -1L): Long {
         return sharedPref?.getLong(key, default) ?: default
     }

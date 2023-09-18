@@ -63,24 +63,37 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.chatapp.App
 import com.example.chatapp.R
+import com.example.chatapp.constants.Constants
 import com.example.chatapp.dataclass.MsgItem
 import com.example.chatapp.dataclass.MsgUI
+import com.example.chatapp.prefs.PrefManager
 import com.example.chatapp.ui.theme.ChatAppTheme
+import com.example.chatapp.utils.PrefUtil
+import com.example.chatapp.utils.Utils
 import com.example.chatapp.viewmodels.ChatViewModel
 import com.example.chatapp.viewmodels.ThemeViewModel
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import java.text.SimpleDateFormat
+
+var firstLoad: Boolean = true
 
 @Composable
 @RequiresApi(Build.VERSION_CODES.O)
 fun ChatPage(navController: NavController) {
-
-
-    Log.d("flag", "onCreate: ChatActivity")
     val chatViewModel: ChatViewModel = viewModel()
     val messages by chatViewModel.messages.observeAsState()
     val themeViewModel: ThemeViewModel = viewModel()
     val darkThemeEnabled by themeViewModel.darkThemeEnabled.observeAsState()
+    Log.d("flag", "ChatPage: reload")
+
+    if (PrefUtil.getUserId() != "" && firstLoad) {
+        firstLoad = false
+        getToken()
+    }
 
     ChatAppTheme(darkTheme = darkThemeEnabled!!) {
         Surface() {
@@ -88,7 +101,7 @@ fun ChatPage(navController: NavController) {
                 modifier = Modifier
                     .fillMaxSize()
             ) {
-                HeaderWithProfile(themeViewModel, chatViewModel)
+                HeaderWithProfile(themeViewModel, chatViewModel, navController)
                 MessageList(
                     chatViewModel,
                     messages!!,
@@ -103,7 +116,11 @@ fun ChatPage(navController: NavController) {
 }
 
 @Composable
-fun HeaderWithProfile(themeViewModel: ThemeViewModel, chatViewModel: ChatViewModel) {
+fun HeaderWithProfile(
+    themeViewModel: ThemeViewModel,
+    chatViewModel: ChatViewModel,
+    navController: NavController
+) {
     var isMenuVisible by remember { mutableStateOf(false) }
     val name by remember { mutableStateOf("Bot") }
 
@@ -174,6 +191,17 @@ fun HeaderWithProfile(themeViewModel: ThemeViewModel, chatViewModel: ChatViewMod
                     }, onClick = {
                         isMenuVisible = false
                         themeViewModel.toggleDarkTheme()
+                    })
+
+                    DropdownMenuItem(text = {
+                        Text(
+                            text = "Logout",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }, onClick = {
+                        Log.d("flag", "HeaderWithProfile: logout button click")
+                        signOut(navController)
+                        isMenuVisible = false
                     })
                 }
             } else {
@@ -391,6 +419,40 @@ fun MessageInput(chatViewModel: ChatViewModel) {
     }
 }
 
+private fun getToken() = FirebaseMessaging.getInstance().token.addOnSuccessListener(::updateToken)
+
+private fun updateToken(token: String) {
+    val db = FirebaseFirestore.getInstance()
+    Log.d("flag", "updateToken: ${PrefUtil.getUserId()}")
+    val documentReference =
+        db.collection(Constants.KEY_COLLECTION_USERS).document(PrefUtil.getUserId())
+    documentReference.update(Constants.KEY_FCM_TOKEN, token)
+        .addOnSuccessListener { Log.d("flag", "updateToken: Success") }
+        .addOnFailureListener { Log.d("flag", "updateToken: Failure") }
+}
+
+private fun signOut(navController: NavController) {
+    Utils.showToast("Signing out")
+    Log.d("flag", "signOut: signing out")
+    val db = FirebaseFirestore.getInstance()
+    val documentReference =
+        db.collection(Constants.KEY_COLLECTION_USERS).document(PrefUtil.getUserId())
+    val data = HashMap<String, Any>()
+    data[Constants.KEY_FCM_TOKEN] = FieldValue.delete()
+    Log.d("flag", "signOut: token delete")
+    documentReference.update(data)
+        .addOnSuccessListener {
+            PrefManager.clearPreferences()
+            Log.d("flag", "signOut: clear preference")
+            navController.navigate("login_page") {
+                popUpTo(navController.graph.startDestinationId) {
+                    inclusive = true
+                }
+                launchSingleTop = true
+            }
+        }
+        .addOnFailureListener { Utils.showToast("Unable to sign out") }
+}
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true)
@@ -401,7 +463,7 @@ fun GreetingPreview() {
     val themeViewModel: ThemeViewModel = viewModel()
     ChatAppTheme {
         Column(Modifier.fillMaxSize()) {
-            HeaderWithProfile(themeViewModel, chatViewModel)
+            HeaderWithProfile(themeViewModel, chatViewModel, NavController(App.ctx))
             MessageList(
                 chatViewModel,
                 messages!!,
