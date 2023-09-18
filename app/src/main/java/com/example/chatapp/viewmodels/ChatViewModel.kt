@@ -10,7 +10,7 @@ class ChatViewModel : ViewModel() {
     private val _messages = MutableLiveData<List<MsgItem>>()
     val messages: LiveData<List<MsgItem>> = _messages
 
-    init {
+    /*init {
         _messages.value = listOf(
             MsgItem("Hello", true),
             MsgItem("Hey", true),
@@ -26,7 +26,7 @@ class ChatViewModel : ViewModel() {
             MsgItem("Compose is fun", true),
             MsgItem("Hello, How can I help you?", false, "Bot")
         )
-    }
+    }*/
 
     fun addMessage(message: MsgItem) {
         val currentMessages = _messages.value.orEmpty()

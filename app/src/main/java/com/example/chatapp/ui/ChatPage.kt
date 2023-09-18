@@ -74,10 +74,15 @@ import com.example.chatapp.utils.PrefUtil
 import com.example.chatapp.utils.Utils
 import com.example.chatapp.viewmodels.ChatViewModel
 import com.example.chatapp.viewmodels.ThemeViewModel
+import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.messaging.FirebaseMessaging
 import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.EventListener
+import java.util.Locale
 
 var firstLoad: Boolean = true
 
@@ -93,6 +98,7 @@ fun ChatPage(navController: NavController) {
     if (PrefUtil.getUserId() != "" && firstLoad) {
         firstLoad = false
         getToken()
+        getMessages(chatViewModel)
     }
 
     ChatAppTheme(darkTheme = darkThemeEnabled!!) {
@@ -104,7 +110,7 @@ fun ChatPage(navController: NavController) {
                 HeaderWithProfile(themeViewModel, chatViewModel, navController)
                 MessageList(
                     chatViewModel,
-                    messages!!,
+                    messages,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
@@ -223,15 +229,17 @@ fun HeaderWithProfile(
 @Composable
 fun MessageList(
     chatViewModel: ChatViewModel,
-    msgList: List<MsgItem>,
+    msgList: List<MsgItem>?,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
         modifier = modifier,
         reverseLayout = true,
     ) {
-        items(msgList.reversed()) { message ->
-            MessageCard(chatViewModel, message)
+        if (msgList != null) {
+            items(msgList.reversed()) { message ->
+                MessageCard(chatViewModel, message)
+            }
         }
     }
 }
@@ -365,9 +373,9 @@ fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) {
                     color = msgUI.msgColor,
                 )
             }
-            val formatter = SimpleDateFormat("HH:mm")
-            val formatted = formatter.format(messageItem.timeStamp)
-            Text(text = formatted, fontSize = 10.sp, fontFamily = FontFamily.Serif)
+            val formatter =
+                SimpleDateFormat("HH:mm", Locale.getDefault()).format(messageItem.timeStamp)
+            Text(text = formatter, fontSize = 10.sp, fontFamily = FontFamily.Serif)
         }
     }
 }
@@ -389,8 +397,9 @@ fun MessageInput(chatViewModel: ChatViewModel) {
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun sendMessage() {
-        chatViewModel.addMessage(MsgItem(inputValue, true))
-        chatViewModel.addMessage(MsgItem("received", false, "Bot"))
+//        chatViewModel.addMessage(MsgItem(inputValue, true))
+//        chatViewModel.addMessage(MsgItem("received", false, "Bot"))
+        addMsgToDB(inputValue)
         inputValue = ""
     }
     Row(modifier = Modifier.padding(3.dp)) {
@@ -429,6 +438,46 @@ private fun updateToken(token: String) {
     documentReference.update(Constants.KEY_FCM_TOKEN, token)
         .addOnSuccessListener { Log.d("flag", "updateToken: Success") }
         .addOnFailureListener { Log.d("flag", "updateToken: Failure") }
+}
+
+private fun getMessages(chatViewModel: ChatViewModel){
+    val db = FirebaseFirestore.getInstance()
+    /*db.collection(Constants.KEY_COLLECTION_CHAT)
+        .get()
+        .addOnCompleteListener {
+
+
+        }*/
+    db.collection(Constants.KEY_COLLECTION_CHAT)
+        .addSnapshotListener(eventListener(chatViewModel))
+}
+
+private fun eventListener(chatViewModel: ChatViewModel) = com.google.firebase.firestore.EventListener<QuerySnapshot> { value, error ->
+    if(error != null)
+        return@EventListener
+    else if(value != null){
+        Log.d("flag", "eventListener: Got msg ")
+        var count = chatViewModel.messages.value?.size
+        for (docChange in value.documentChanges){
+            if(docChange.type == DocumentChange.Type.ADDED){
+                val msg = docChange.document[Constants.KEY_MESSAGE].toString()
+                val isMine = PrefUtil.getUserId() == docChange.document[Constants.KEY_SENDER_ID].toString()
+                val name = if(isMine) "Me" else docChange.document[Constants.KEY_NAME].toString()
+                val time = docChange.document.getDate(Constants.KEY_TIMESTAMP)
+                chatViewModel.addMessage(MsgItem(msg, isMine, name, time!!))
+            }
+        }
+    }
+}
+
+private fun addMsgToDB(inputValue: String) {
+    val db = FirebaseFirestore.getInstance()
+    val message = HashMap<String, Any>()
+    message[Constants.KEY_SENDER_ID] = PrefUtil.getUserId()
+    message[Constants.KEY_NAME] = PrefUtil.getUserName()
+    message[Constants.KEY_MESSAGE] = inputValue
+    message[Constants.KEY_TIMESTAMP] = Calendar.getInstance().time
+    db.collection(Constants.KEY_COLLECTION_CHAT).add(message)
 }
 
 private fun signOut(navController: NavController) {
