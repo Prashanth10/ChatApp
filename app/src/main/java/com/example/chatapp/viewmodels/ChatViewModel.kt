@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.chatapp.dataclass.MsgItem
+import java.util.Date
 
 class ChatViewModel : ViewModel() {
     private val _messages = MutableLiveData<List<MsgItem>>()
@@ -45,9 +46,30 @@ class ChatViewModel : ViewModel() {
         _messages.value = updatedList
     }
 
-    fun delete() {
-        val currentList = _messages.value ?: emptyList()
-        val updatedList = currentList.filter { !it.isSelected }
+    fun delete(chatId: String){
+        val currentList = _messages.value.orEmpty().toMutableList()
+        val itemToDelete = currentList.find { it.chatId == chatId }
+        itemToDelete?.let {
+            currentList.remove(it)
+        }
+        _messages.value = currentList
+    }
+
+    fun update(chatId: String, editedMsg: String, time: Date){
+        val currentList = _messages.value.orEmpty()
+        val updatedList = currentList.map {
+            if (it.chatId == chatId) {
+                Log.d("flag", "selection: current ${it.isSelected}")
+                it.copy(content = editedMsg, timeStamp = time)
+            } else
+                it
+        }
         _messages.value = updatedList
     }
+
+//    fun delete() {
+//        val currentList = _messages.value ?: emptyList()
+//        val updatedList = currentList.filter { !it.isSelected }
+//        _messages.value = updatedList
+//    }
 }

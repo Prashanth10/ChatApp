@@ -217,7 +217,11 @@ fun HeaderWithProfile(
                     modifier = Modifier
                         .size(40.dp)
                         .padding(top = 3.dp, end = 2.dp)
-                        .clickable { chatViewModel.delete() }
+                        .clickable {
+                            val selectedList = messageList?.filter { it.isSelected }
+                            delete(selectedList)
+//                            chatViewModel.delete()
+                        }
                         .align(Alignment.CenterVertically)
                 )
             }
@@ -297,7 +301,8 @@ fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) {
                     TextButton(
                         onClick = {
                             Log.d("flag", "MessageCard: Edit output $newText")
-                            messageItem.content = newText
+//                            messageItem.content = newText
+                            editMsg(messageItem, newText)
                             isDialogOpen = false
                         }
                     ) {
@@ -341,8 +346,10 @@ fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) {
                         role = null,
                         onLongClickLabel = "message selected",
                         onLongClick = {
-                            chatViewModel.selection(messageItem)
-                            Log.d("flag", "MessageCard: Long pressed")
+                            if (messageItem.isMine) {
+                                chatViewModel.selection(messageItem)
+                                Log.d("flag", "MessageCard: Long pressed")
+                            }
                         },
                         onDoubleClick = { },
                         onClick = {
@@ -442,12 +449,6 @@ private fun updateToken(token: String) {
 
 private fun getMessages(chatViewModel: ChatViewModel){
     val db = FirebaseFirestore.getInstance()
-    /*db.collection(Constants.KEY_COLLECTION_CHAT)
-        .get()
-        .addOnCompleteListener {
-
-
-        }*/
     db.collection(Constants.KEY_COLLECTION_CHAT)
         .addSnapshotListener(eventListener(chatViewModel))
 }
@@ -456,15 +457,27 @@ private fun eventListener(chatViewModel: ChatViewModel) = com.google.firebase.fi
     if(error != null)
         return@EventListener
     else if(value != null){
-        Log.d("flag", "eventListener: Got msg ")
+        Log.d("flag", "eventListener: Got msg")
         var count = chatViewModel.messages.value?.size
         for (docChange in value.documentChanges){
             if(docChange.type == DocumentChange.Type.ADDED){
                 val msg = docChange.document[Constants.KEY_MESSAGE].toString()
+                Log.d("flag", "eventListener: ${PrefUtil.getUserId()}" +
+                        " ${docChange.document[Constants.KEY_SENDER_ID].toString()} ${docChange.document.id}")
                 val isMine = PrefUtil.getUserId() == docChange.document[Constants.KEY_SENDER_ID].toString()
                 val name = if(isMine) "Me" else docChange.document[Constants.KEY_NAME].toString()
                 val time = docChange.document.getDate(Constants.KEY_TIMESTAMP)
-                chatViewModel.addMessage(MsgItem(msg, isMine, name, time!!))
+                chatViewModel.addMessage(MsgItem(docChange.document.id, msg, isMine, name, time!!))
+            }
+            else if(docChange.type == DocumentChange.Type.REMOVED){
+                Log.d("flag", "eventListener: doc removed ${docChange.document.id}")
+                chatViewModel.delete(docChange.document.id)
+            }
+            else if(docChange.type == DocumentChange.Type.MODIFIED){
+                val msg = docChange.document[Constants.KEY_MESSAGE].toString()
+                val time = docChange.document.getDate(Constants.KEY_TIMESTAMP)
+                Log.d("flag", "eventListener: Edit ${docChange.document.id}, $msg, $time")
+                chatViewModel.update(docChange.document.id, msg, time!!)
             }
         }
     }
@@ -480,6 +493,32 @@ private fun addMsgToDB(inputValue: String) {
     db.collection(Constants.KEY_COLLECTION_CHAT).add(message)
 }
 
+private fun delete(selectedList: List<MsgItem>?){
+    val db = FirebaseFirestore.getInstance()
+    selectedList?.forEach {
+        Log.d("flag", "delete: ${it.chatId}")
+        db.collection(Constants.KEY_COLLECTION_CHAT)
+            .document(it.chatId)
+            .delete()
+    }
+}
+
+private fun editMsg(msgItem: MsgItem, newMsg: String){
+    val db = FirebaseFirestore.getInstance()
+    val documentReference = db.collection(Constants.KEY_COLLECTION_CHAT)
+        .document(msgItem.chatId)
+    val map = hashMapOf<String, Any>(
+        Constants.KEY_MESSAGE to newMsg,
+        Constants.KEY_TIMESTAMP to Calendar.getInstance().time
+    )
+    documentReference.update(map)
+        .addOnSuccessListener {
+            Log.d("flag", "editMsg: Update success")
+        }.addOnFailureListener {
+            Log.d("flag", "editMsg: Update failed $it")
+        }
+}
+
 private fun signOut(navController: NavController) {
     Utils.showToast("Signing out")
     Log.d("flag", "signOut: signing out")
@@ -493,6 +532,7 @@ private fun signOut(navController: NavController) {
         .addOnSuccessListener {
             PrefManager.clearPreferences()
             Log.d("flag", "signOut: clear preference")
+            firstLoad = true
             navController.navigate("login_page") {
                 popUpTo(navController.graph.startDestinationId) {
                     inclusive = true

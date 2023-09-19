@@ -177,6 +177,7 @@ private fun signIn(userData: UserData, navController: NavController) {
                 val documentSnapshot = it.result.documents[0]
                 PrefUtil.setSignedIn(true)
                 PrefUtil.setUserId(documentSnapshot.id)
+                Log.d("flag", "signIn: userId ${documentSnapshot.id}")
                 PrefUtil.setUserName(documentSnapshot.getString(Constants.KEY_NAME)!!)
                 navController.navigate("chat_page") {
                     popUpTo(navController.graph.startDestinationId) {
