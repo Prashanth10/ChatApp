@@ -4,6 +4,7 @@ import java.util.Calendar
 import java.util.Date
 
 data class MsgItem(
+    val chatId: String,
     var content: String,
     val isMine: Boolean,
     val userName: String = "Me",
