@@ -79,9 +79,16 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.messaging.FirebaseMessaging
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import okio.IOException
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.EventListener
 import java.util.Locale
 
 var firstLoad: Boolean = true
@@ -98,6 +105,7 @@ fun ChatPage(navController: NavController) {
     if (PrefUtil.getUserId() != "" && firstLoad) {
         firstLoad = false
         getToken()
+        subscribeTopic()
         getMessages(chatViewModel)
     }
 
@@ -128,7 +136,7 @@ fun HeaderWithProfile(
     navController: NavController
 ) {
     var isMenuVisible by remember { mutableStateOf(false) }
-    val name by remember { mutableStateOf("Bot") }
+    val name by remember { mutableStateOf("ChatGroup") }
 
     Row(
         modifier = Modifier
@@ -143,7 +151,7 @@ fun HeaderWithProfile(
         ) {
             // Profile Picture
             Image(
-                painter = painterResource(id = R.drawable.profile_pic),
+                painter = painterResource(id = R.drawable.group_dp),
                 contentDescription = null,
                 modifier = Modifier
                     .size(50.dp)
@@ -443,45 +451,69 @@ private fun updateToken(token: String) {
     val documentReference =
         db.collection(Constants.KEY_COLLECTION_USERS).document(PrefUtil.getUserId())
     documentReference.update(Constants.KEY_FCM_TOKEN, token)
-        .addOnSuccessListener { Log.d("flag", "updateToken: Success") }
+        .addOnSuccessListener {
+            Log.d("flag", "updateToken: Success")
+            PrefUtil.setToken(token)
+        }
         .addOnFailureListener { Log.d("flag", "updateToken: Failure") }
 }
 
-private fun getMessages(chatViewModel: ChatViewModel){
+private fun subscribeTopic() {
+    FirebaseMessaging.getInstance().subscribeToTopic(Constants.KEY_TOPIC)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Log.d("flag", "subscribeTopic: subscribed")
+            } else {
+                Log.d("flag", "subscribeTopic: failed")
+            }
+        }
+}
+
+private fun getMessages(chatViewModel: ChatViewModel) {
     val db = FirebaseFirestore.getInstance()
     db.collection(Constants.KEY_COLLECTION_CHAT)
         .addSnapshotListener(eventListener(chatViewModel))
 }
 
-private fun eventListener(chatViewModel: ChatViewModel) = com.google.firebase.firestore.EventListener<QuerySnapshot> { value, error ->
-    if(error != null)
-        return@EventListener
-    else if(value != null){
-        Log.d("flag", "eventListener: Got msg")
-        var count = chatViewModel.messages.value?.size
-        for (docChange in value.documentChanges){
-            if(docChange.type == DocumentChange.Type.ADDED){
-                val msg = docChange.document[Constants.KEY_MESSAGE].toString()
-                Log.d("flag", "eventListener: ${PrefUtil.getUserId()}" +
-                        " ${docChange.document[Constants.KEY_SENDER_ID].toString()} ${docChange.document.id}")
-                val isMine = PrefUtil.getUserId() == docChange.document[Constants.KEY_SENDER_ID].toString()
-                val name = if(isMine) "Me" else docChange.document[Constants.KEY_NAME].toString()
-                val time = docChange.document.getDate(Constants.KEY_TIMESTAMP)
-                chatViewModel.addMessage(MsgItem(docChange.document.id, msg, isMine, name, time!!))
-            }
-            else if(docChange.type == DocumentChange.Type.REMOVED){
-                Log.d("flag", "eventListener: doc removed ${docChange.document.id}")
-                chatViewModel.delete(docChange.document.id)
-            }
-            else if(docChange.type == DocumentChange.Type.MODIFIED){
-                val msg = docChange.document[Constants.KEY_MESSAGE].toString()
-                val time = docChange.document.getDate(Constants.KEY_TIMESTAMP)
-                Log.d("flag", "eventListener: Edit ${docChange.document.id}, $msg, $time")
-                chatViewModel.update(docChange.document.id, msg, time!!)
+private fun eventListener(chatViewModel: ChatViewModel) =
+    com.google.firebase.firestore.EventListener<QuerySnapshot> { value, error ->
+        if (error != null)
+            return@EventListener
+        else if (value != null) {
+            Log.d("flag", "eventListener: Got msg")
+            for (docChange in value.documentChanges) {
+                if (docChange.type == DocumentChange.Type.ADDED) {
+                    val msg = docChange.document[Constants.KEY_MESSAGE].toString()
+                    Log.d(
+                        "flag", "eventListener: ${PrefUtil.getUserId()}" +
+                                " ${docChange.document[Constants.KEY_SENDER_ID].toString()} ${docChange.document.id}"
+                    )
+                    val isMine =
+                        PrefUtil.getUserId() == docChange.document[Constants.KEY_SENDER_ID].toString()
+                    val name =
+                        if (isMine) "Me" else docChange.document[Constants.KEY_NAME].toString()
+                    val time = docChange.document.getDate(Constants.KEY_TIMESTAMP)
+                    chatViewModel.addMessage(
+                        MsgItem(
+                            docChange.document.id,
+                            msg,
+                            isMine,
+                            name,
+                            time!!
+                        )
+                    )
+                } else if (docChange.type == DocumentChange.Type.REMOVED) {
+                    Log.d("flag", "eventListener: doc removed ${docChange.document.id}")
+                    chatViewModel.delete(docChange.document.id)
+                } else if (docChange.type == DocumentChange.Type.MODIFIED) {
+                    val msg = docChange.document[Constants.KEY_MESSAGE].toString()
+                    val time = docChange.document.getDate(Constants.KEY_TIMESTAMP)
+                    Log.d("flag", "eventListener: Edit ${docChange.document.id}, $msg, $time")
+                    chatViewModel.update(docChange.document.id, msg, time!!)
+                }
             }
         }
     }
-}
 
 private fun addMsgToDB(inputValue: String) {
     val db = FirebaseFirestore.getInstance()
@@ -491,9 +523,58 @@ private fun addMsgToDB(inputValue: String) {
     message[Constants.KEY_MESSAGE] = inputValue
     message[Constants.KEY_TIMESTAMP] = Calendar.getInstance().time
     db.collection(Constants.KEY_COLLECTION_CHAT).add(message)
+//    sendTopic(inputValue)
+    sendNotification(inputValue)
 }
 
-private fun delete(selectedList: List<MsgItem>?){
+/*private fun sendTopic(msg: String) {
+    val topic = Constants.KEY_TOPIC
+    val message = RemoteMessage.Builder(topic)
+        .setData(mapOf("userName" to PrefUtil.getUserName(), "msgContent" to msg))
+        .build()
+    FirebaseMessaging.getInstance().send(message)
+    Log.d("flag", "sendTopic: ${message.data["msgContent"]}")
+}*/
+
+private fun sendNotification(msg: String) {
+    val serverKey =
+        "AAAAdILLGgg:APA91bGoM5fR3stMNlT8utYseQCFJmwAMMx7Ahi11mM6DokRIfcT5JjgUcip2vWDAWtLCAJ-_nliDpGsXCoG5OdcJtotHUXQfFY1MdXxU80jz2T5zANLh9AAv5XYQDGE7eaXO8T-RJvU"
+    val client = OkHttpClient()
+    val url = "https://fcm.googleapis.com/fcm/send"
+    val jsonBody = """
+        {
+            "to": "/topics/messageTopic",
+            "data": {
+                "msgContent": "$msg",
+                "userName": "${PrefUtil.getUserName()}"
+            }
+        }
+    """.trimIndent()
+
+    val mediaType = "application/json".toMediaTypeOrNull()
+    val requestBody = jsonBody.toRequestBody(mediaType)
+
+    val request = Request.Builder()
+        .url(url)
+        .post(requestBody)
+        .addHeader("Content-Type", "application/json")
+        .addHeader("Authorization", "key=$serverKey")
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            Log.d("flag", "onFailure: Notification post failed")
+            e.printStackTrace()
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            val responseBody = response.body?.string()
+            Log.d("flag", "Notification Post $ onResponse: $responseBody")
+        }
+    })
+}
+
+private fun delete(selectedList: List<MsgItem>?) {
     val db = FirebaseFirestore.getInstance()
     selectedList?.forEach {
         Log.d("flag", "delete: ${it.chatId}")
@@ -503,7 +584,7 @@ private fun delete(selectedList: List<MsgItem>?){
     }
 }
 
-private fun editMsg(msgItem: MsgItem, newMsg: String){
+private fun editMsg(msgItem: MsgItem, newMsg: String) {
     val db = FirebaseFirestore.getInstance()
     val documentReference = db.collection(Constants.KEY_COLLECTION_CHAT)
         .document(msgItem.chatId)
