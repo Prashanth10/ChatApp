@@ -10,6 +10,11 @@ object PrefUtil {
     fun setSignedIn(status: Boolean) =
         PrefManager.put(Constants.KEY_IS_SIGNED_IN, status)
 
+    fun getToken() = PrefManager.getString(Constants.KEY_FCM_TOKEN)
+
+    fun setToken(token: String) =
+        PrefManager.put(Constants.KEY_FCM_TOKEN, token)
+
     fun getUserId() = PrefManager.getString(Constants.KEY_USER_ID)
 
     fun setUserId(id: String) =
