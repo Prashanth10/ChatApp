@@ -46,7 +46,7 @@ class ChatViewModel : ViewModel() {
         _messages.value = updatedList
     }
 
-    fun delete(chatId: String){
+    fun delete(chatId: String) {
         val currentList = _messages.value.orEmpty().toMutableList()
         val itemToDelete = currentList.find { it.chatId == chatId }
         itemToDelete?.let {
@@ -55,7 +55,7 @@ class ChatViewModel : ViewModel() {
         _messages.value = currentList
     }
 
-    fun update(chatId: String, editedMsg: String, time: Date){
+    fun update(chatId: String, editedMsg: String, time: Date) {
         val currentList = _messages.value.orEmpty()
         val updatedList = currentList.map {
             if (it.chatId == chatId) {

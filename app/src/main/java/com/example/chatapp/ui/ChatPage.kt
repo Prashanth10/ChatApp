@@ -77,6 +77,7 @@ import com.example.chatapp.viewmodels.ThemeViewModel
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.messaging.FirebaseMessaging
 import okhttp3.Call
@@ -408,7 +409,7 @@ fun MessageCard(chatViewModel: ChatViewModel, messageItem: MsgItem) {
                 )
             }
             val formatter =
-                SimpleDateFormat("HH:mm", Locale.getDefault()).format(messageItem.timeStamp)
+                SimpleDateFormat("MM/dd HH:mm", Locale.getDefault()).format(messageItem.timeStamp)
             Text(text = formatter, fontSize = 10.sp, fontFamily = FontFamily.Serif)
         }
     }
@@ -502,6 +503,7 @@ private fun unSubscribeTopic() {
 private fun getMessages(chatViewModel: ChatViewModel) {
     val db = FirebaseFirestore.getInstance()
     db.collection(Constants.KEY_COLLECTION_CHAT)
+        .orderBy(Constants.KEY_TIMESTAMP, Query.Direction.ASCENDING)
         .addSnapshotListener(eventListener(chatViewModel))
 }
 
