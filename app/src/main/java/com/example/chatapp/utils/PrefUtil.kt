@@ -29,4 +29,8 @@ object PrefUtil {
 
     fun setGroupNotifications(notify: Boolean) =
         PrefManager.put(Constants.KEY_GROUP_NOTIFICATION, notify)
+
+    fun getAppTheme() = PrefManager.getBoolean(Constants.KEY_APP_THEME)
+
+    fun setAppTheme(theme: Boolean) = PrefManager.put(Constants.KEY_APP_THEME, theme)
 }

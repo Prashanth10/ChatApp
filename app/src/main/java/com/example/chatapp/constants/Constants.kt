@@ -14,4 +14,5 @@ object Constants {
     const val KEY_TIMESTAMP = "timestamp"
     const val KEY_TOPIC = "messageTopic"
     const val KEY_GROUP_NOTIFICATION = "groupNotification"
+    const val KEY_APP_THEME = "appTheme"
 }
