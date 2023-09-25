@@ -21,6 +21,12 @@ object PrefUtil {
         PrefManager.put(Constants.KEY_USER_ID, id)
 
     fun getUserName() = PrefManager.getString(Constants.KEY_NAME)
+
     fun setUserName(name: String) =
         PrefManager.put(Constants.KEY_NAME, name)
+
+    fun getGroupNotifications() = PrefManager.getBoolean(Constants.KEY_GROUP_NOTIFICATION)
+
+    fun setGroupNotifications(notify: Boolean) =
+        PrefManager.put(Constants.KEY_GROUP_NOTIFICATION, notify)
 }

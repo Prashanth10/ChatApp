@@ -123,7 +123,7 @@ fun ChatPage(navController: NavController) {
                         .weight(1f)
                         .fillMaxWidth()
                 )
-                MessageInput(chatViewModel)
+                MessageInput()
             }
         }
     }
@@ -196,6 +196,12 @@ fun HeaderWithProfile(
                 ) {
                     val themeText =
                         if (themeViewModel.darkThemeEnabled.value!!) "Light" else "Dark"
+                    val groupNotifications =
+                        if (PrefUtil.getGroupNotifications()) "Mute" else "UnMute"
+                    Log.d(
+                        "flag",
+                        "HeaderWithProfile: Mute Notifications ${PrefUtil.getGroupNotifications()} $groupNotifications"
+                    )
 
                     DropdownMenuItem(text = {
                         Text(
@@ -205,6 +211,19 @@ fun HeaderWithProfile(
                     }, onClick = {
                         isMenuVisible = false
                         themeViewModel.toggleDarkTheme()
+                    })
+
+                    DropdownMenuItem(text = {
+                        Text(
+                            text = "$groupNotifications Group",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }, onClick = {
+                        isMenuVisible = false
+                        if (PrefUtil.getGroupNotifications())
+                            unSubscribeTopic()
+                        else
+                            subscribeTopic()
                     })
 
                     DropdownMenuItem(text = {
@@ -407,7 +426,7 @@ fun cardShapeFor(message: MsgItem): Shape {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MessageInput(chatViewModel: ChatViewModel) {
+fun MessageInput() {
     var inputValue by remember { mutableStateOf("") }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -463,9 +482,20 @@ private fun subscribeTopic() {
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 Log.d("flag", "subscribeTopic: subscribed")
-            } else {
+                PrefUtil.setGroupNotifications(true)
+            } else
                 Log.d("flag", "subscribeTopic: failed")
-            }
+        }
+}
+
+private fun unSubscribeTopic() {
+    FirebaseMessaging.getInstance().unsubscribeFromTopic(Constants.KEY_TOPIC)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Log.d("flag", "unSubscribeTopic: unSubscribed")
+                PrefUtil.setGroupNotifications(false)
+            } else
+                Log.d("flag", "unSubscribeTopic: failed")
         }
 }
 
@@ -641,7 +671,7 @@ fun GreetingPreview() {
                     .weight(1f)
                     .fillMaxWidth()
             )
-            MessageInput(chatViewModel)
+            MessageInput()
         }
     }
 }
