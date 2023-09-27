@@ -6,14 +6,19 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -25,6 +30,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -42,6 +49,9 @@ import com.example.chatapp.ui.theme.ChatAppTheme
 import com.example.chatapp.utils.PrefUtil
 import com.example.chatapp.utils.Utils
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginPage(navController: NavController) {
@@ -84,10 +94,8 @@ fun LoginPage(navController: NavController) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
 
-                        //.........................Spacer
                         Spacer(modifier = Modifier.height(80.dp))
 
-                        //.........................Text: title
                         Text(
                             text = "Sign In",
                             textAlign = TextAlign.Center,
@@ -109,12 +117,8 @@ fun LoginPage(navController: NavController) {
                             value = userData.password,
                             onValueChange = { userData = userData.copy(password = it) })
 
-                        val gradientColor = listOf(Color(0xFF484BF1), Color(0xFF673AB7))
-                        val cornerRadius = 16.dp
-
-
                         Spacer(modifier = Modifier.padding(10.dp))
-                        GradientButton(
+                        /*GradientButton(
                             gradientColors = gradientColor,
                             cornerRadius = cornerRadius,
                             nameButton = "Login",
@@ -130,7 +134,64 @@ fun LoginPage(navController: NavController) {
                                     signIn(userData, navController)
                                 }
                             }
+                        )*/
+                        val gradientColors = listOf(Color(0xFF484BF1), Color(0xFF673AB7))
+                        val cornerRadius = 16.dp
+                        val roundedCornerShape = RoundedCornerShape(
+                            topStart = 30.dp,
+                            bottomEnd = 30.dp
                         )
+                        var isLoading by remember { mutableStateOf(false) }
+                        Button(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 32.dp, end = 32.dp),
+                            onClick = {
+                                val email = userData.email
+                                val password = userData.password
+                                if (validation(email, password)) {
+                                    isLoading = true
+                                    Log.d("flag", "LoginPage: Validation passed")
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        signIn(userData, navController)
+                                        isLoading = false
+                                    }
+                                }
+                            },
+                            contentPadding = PaddingValues(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Transparent
+                            ),
+                            shape = RoundedCornerShape(cornerRadius),
+                            enabled = !isLoading
+                        ) {
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        brush = Brush.horizontalGradient(colors = gradientColors),
+                                        shape = roundedCornerShape
+                                    )
+                                    .clip(roundedCornerShape)
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .padding(4.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Login",
+                                        fontSize = 20.sp,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
 
                         Spacer(modifier = Modifier.padding(10.dp))
                         TextButton(onClick = {
