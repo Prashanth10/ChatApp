@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -19,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,7 +51,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -61,6 +62,9 @@ import com.example.chatapp.dataclass.RegisterFormData
 import com.example.chatapp.ui.theme.ChatAppTheme
 import com.example.chatapp.utils.Utils
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun RegisterPage(navController: NavController) {
@@ -128,13 +132,9 @@ fun RegisterPage(navController: NavController) {
                             value = formData.confirmPassword,
                             onValueChange = { formData = formData.copy(confirmPassword = it) }
                         )
-
-                        val gradientColor = listOf(Color(0xFF484BF1), Color(0xFF673AB7))
-                        val cornerRadius = 16.dp
-
                         Spacer(modifier = Modifier.padding(10.dp))
 
-                        GradientButton(
+                        /*GradientButton(
                             gradientColors = gradientColor,
                             cornerRadius = cornerRadius,
                             nameButton = "Create An Account",
@@ -152,7 +152,68 @@ fun RegisterPage(navController: NavController) {
                                     signUp(name, email, password, navController)
                                 }
                             }
+                        )*/
+
+                        val gradientColors = listOf(Color(0xFF484BF1), Color(0xFF673AB7))
+                        val cornerRadius = 16.dp
+                        val roundedCornerShape = RoundedCornerShape(
+                            topStart = 30.dp,
+                            bottomEnd = 30.dp
                         )
+                        var isLoading by remember { mutableStateOf(false) }
+                        Button(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 32.dp, end = 32.dp),
+                            onClick = {
+                                val name = formData.name
+                                val email = formData.email
+                                val password = formData.password
+                                val confirmPassword = formData.confirmPassword
+                                if (validation(name, email, password, confirmPassword)) {
+                                    isLoading = true
+                                    Log.d("flag", "RegisterPage: Validation passed")
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        signUp(name, email, password, navController)
+                                        isLoading = false
+                                    }
+                                }
+                            },
+                            contentPadding = PaddingValues(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Transparent
+                            ),
+                            shape = RoundedCornerShape(cornerRadius),
+                            enabled = !isLoading
+                        ) {
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        brush = Brush.horizontalGradient(colors = gradientColors),
+                                        shape = roundedCornerShape
+                                    )
+                                    .clip(roundedCornerShape)
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .padding(4.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Create Account",
+                                        fontSize = 20.sp,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.padding(10.dp))
                         TextButton(onClick = {
                             navController.navigate("login_page") {
@@ -174,7 +235,7 @@ fun RegisterPage(navController: NavController) {
     }
 }
 
-@Composable
+/*@Composable
 fun GradientButton(
     gradientColors: List<Color>,
     cornerRadius: Dp,
@@ -214,7 +275,7 @@ fun GradientButton(
             )
         }
     }
-}
+}*/
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -316,6 +377,7 @@ private fun validation(
 }
 
 private fun signUp(name: String, email: String, password: String, navController: NavController) {
+//    Thread.sleep(2000)
     val db = FirebaseFirestore.getInstance()
     val user = HashMap<String, kotlin.Any>()
     user[Constants.KEY_NAME] = name
@@ -333,7 +395,6 @@ private fun signUp(name: String, email: String, password: String, navController:
         .addOnFailureListener {
             Utils.showToast(it.message!!)
         }
-
 }
 
 @Preview(showBackground = true)
