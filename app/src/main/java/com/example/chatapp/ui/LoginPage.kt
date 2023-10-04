@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,6 +40,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.chatapp.App
@@ -48,6 +51,8 @@ import com.example.chatapp.dataclass.UserData
 import com.example.chatapp.ui.theme.ChatAppTheme
 import com.example.chatapp.utils.PrefUtil
 import com.example.chatapp.utils.Utils
+import com.example.chatapp.viewmodels.LoginViewModel
+import com.example.chatapp.viewmodels.LoginViewModel2
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -142,6 +147,9 @@ fun LoginPage(navController: NavController) {
                             bottomEnd = 30.dp
                         )
                         var isLoading by remember { mutableStateOf(false) }
+                        val loginViewModel: LoginViewModel2 = hiltViewModel()
+                        val loginSuccess = loginViewModel.loginSuccess.observeAsState(false)
+//                        val loginSuccess by LoginViewModel().loginSuccess.observeAsState(false)
                         Button(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -152,10 +160,20 @@ fun LoginPage(navController: NavController) {
                                 if (validation(email, password)) {
                                     isLoading = true
                                     Log.d("flag", "LoginPage: Validation passed")
-                                    CoroutineScope(Dispatchers.IO).launch {
+                                    loginViewModel.loginUser(userData)
+                                    if(loginSuccess.value) {
+                                        isLoading = false
+                                        navController.navigate("chat_page") {
+                                            popUpTo(navController.graph.startDestinationId) {
+                                                inclusive = true
+                                            }
+                                            launchSingleTop = true
+                                        }
+                                    }
+                                    /*CoroutineScope(Dispatchers.IO).launch {
                                         signIn(userData, navController)
                                         isLoading = false
-                                    }
+                                    }*/
                                 }
                             },
                             contentPadding = PaddingValues(),
